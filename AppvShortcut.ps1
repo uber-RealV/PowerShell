@@ -29,7 +29,7 @@ Function LogWrite {
         2 { $LogLevelString = "[Error]........" }
         default { $LogLevelString = "[Not Specified].." }
     }
-    Add-Content $Logfile -value $LogLevelString + " " + $LogString
+    Add-Content -Path $LogFile -value $LogLevelString + " " + $LogString
 
     if ($LogLevel -eq 0 ) { Write-Host "$LogLevelString $LogString" -ForegroundColor Green }
     if ($LogLevel -eq 1 ) { Write-Host "$LogLevelString $LogString" -ForegroundColor Yellow }
@@ -39,17 +39,22 @@ Function LogWrite {
 
 ## Start Application
 # Check if the backup Path is available and create if needbe
+if ( $AppvPathExists -eq $false ) {
+    LogWrite $LogLevel 2 -LogString "The Specified path [ $AppvPath ] does not exist, Exiting Script"
+    exit
+}
+
 if ( (Test-Path "$BackupPath") -eq $false ) {
-    Write-Host "[ $BackupPath ] does not Exists : Creating" -ForegroundColor Red
+    LogWrite $LogLevel 1 -LogString "[ $BackupPath ] does not Exists : Creating"
     New-Item $BackupPath -type directory | Out-Null
     if ( (Test-Path "$BackupPath") -eq $true ) {
-        Write-Host "[ $BackupPath ] Created" -ForegroundColor Green
+        LogWrite $LogLevel 0 -LogString "[ $BackupPath ] Created"
     } else  {
-        Write-Host "No backup path and insuficient permissions to create it" -ForegroundColor Red
+        LogWrite $LogLevel 2 -LogString "No backup path and insuficient permissions to create it, Exiting Script"
         exit   
     }
 } else {
-    Write-Host "[ $BackupPath ] Exists" -ForegroundColor Green
+    LogWrite $LogLevel 0 -LogString "[ $BackupPath ] Exists"
 }
 # Roll through each package directory and identify the DeploymentConfig.xml
 foreach ( $Package in $Packages ) {
@@ -57,21 +62,20 @@ foreach ( $Package in $Packages ) {
     $ConfigFile = "$Package\$DeploymentConfig"
     # Read the xml file
     [xml]$Config = Get-Content $ConfigFile
-    $Shortcuts = $Config.DeploymentConfiguration.UserConfiguration.Subsystems.Shortcuts
     $ShortcutSetting = $Config.DeploymentConfiguration.UserConfiguration.Subsystems.Shortcuts.Enabled
     
     # Check if the Shortcut settings is enabled
     if ( $ShortcutSetting -eq "true" ) {
         # Create a backup of the file
         Copy-Item $ConfigFile $BackupPath -Force
-        Write-Host "Backed up original file in [ $BackupPath ]" -ForegroundColor Cyan
+        LogWrite $LogLevel 0 -LogString "Backed up original file in [ $BackupPath ]"
         # Modify the settings
-        #$Shortcuts.Enabled = "false"
-        
+        $Shortcuts.Enabled = "false"
+        LogWrite $LogLevel 0 -LogString "Disabled shortcut for $Package"
         # Saving the XML file
         $Config.Save("$ConfigFile")
         AppvSync
     } else {
-        Write-Host "Skipped $Package" -ForegroundColor Red
+        LogWrite $LogLevel 2 -LogString "Skipped $Package, setting already false"
     }
 }
