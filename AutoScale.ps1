@@ -33,15 +33,17 @@ Function LogWrite {
 }
 
 Function UserCheck {
+    $LoggedInUsers = Get-Brokersession -machinename $XAServer.HostedMachineName | Measure-Object
+
     if ($LoggedInUsers -eq 0) {
         LogWrite -loglevel 0 "shutting down the machine"
         ## Shutdown machine
         Exit
     } elseif ($LoggedInUsers -le $UserThreshold) {
         ## prompt users to Log-off from the machine
-        ## Enforce 3 strike rule
+        ## ? Enforce 3 strike rule
     } else {
-         ## DEFINE ACTIONS FOR WHEN THE MACHINE IS NOT IN MAINTENANCE, HOW ARE WE GOING TO REDUCE THE SESSIONS
+        Exit # ? Other
     }
 }
 ## Pre-reqs check
@@ -52,15 +54,17 @@ if ($BrokerConnectionCheck -eq 'offline') {
 }
 
 ## Program
-foreach ($XAServer in $MachinePool){
-    if ($XAServer.InMaintenanceMode -eq $true) {
-        LogWrite -loglevel 0 "Server "$XAServer.HostedMachineName" is already in Mainteance-mode" -ForegroundColor Red
-        LogWrite -loglevel 0 "Checking for user sessions" -ForegroundColor Green
-        
-        $LoggedInUsers = Get-Brokersession -machinename $XAServer.HostedMachineName | Measure-Object
-        
-        
-    } else {
-        LogWrite -loglevel 0 "Server "$XAServer.HostedMachineName" is not in Mainteance-mode" -ForegroundColor Red
+if ($MachinePoolUpCount -le $TartgetValue) {
+    Exit
+} else {
+    foreach ($XAServer in $MachinePool){
+        if ($XAServer.InMaintenanceMode -eq $true) {
+            LogWrite -loglevel 0 "Server "$XAServer.HostedMachineName" is already in Mainteance-mode"
+            LogWrite -loglevel 0 "Checking for user sessions" -ForegroundColor Green
+            
+            UserCheck
+        } else {
+            LogWrite -loglevel 0 "Server "$XAServer.HostedMachineName" is not in Mainteance-mode"
+        }
     }
 }
