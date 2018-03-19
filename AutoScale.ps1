@@ -15,7 +15,7 @@ Function LogWrite {
         [int] $LogLevel = 0
     )
 
-    New-Item $Logfile -tipe file -Force | Out-Null
+    New-Item $Logfile -type file -Force | Out-Null
 
     switch ( $LogLevel ) {
         0 { $LogLevelString = "[Information].." }
